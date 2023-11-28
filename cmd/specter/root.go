@@ -1,8 +1,10 @@
 package specter
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/betuxy/specter/pkg/specter"
 	"github.com/spf13/cobra"
 )
 
@@ -31,9 +33,40 @@ func Execute() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "jinspect",
-	Short: "Inspect json objects interactively.",
+	Use:   "specter",
+	Short: "specter - inspect json objects interactively.",
 	Long:  "A TUI tool to inspect JSON and Yaml objects in a tree view.",
 	Run: func(cmd *cobra.Command, args []string) {
+
+		// Retrieve filepath of file supplied by global flag if exists
+		file, _ := cmd.Flags().GetString("file")
+
+		if file != "" {
+			// Get the absolute Path of a file
+			path, err := specter.GetAbsolutePath(file)
+
+			if err != nil {
+				fmt.Printf("Error: %s\n", err)
+				os.Exit(1)
+
+			} else {
+				fmt.Println(path)
+				content, err := specter.ReadFromFile(path)
+
+				if err != nil {
+					fmt.Println("Somethin went wrong while reading the file.")
+				}
+
+				// This decision needs to either trigger the json or yaml parser later
+				//specter.JsonOrYaml(content)
+
+				fmt.Println(content)
+
+				// more to happen here
+			}
+
+		} else {
+			specter.ReadFromStdin()
+		}
 	},
 }
