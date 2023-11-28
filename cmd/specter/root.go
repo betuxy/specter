@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/betuxy/specter/src/specter"
+	"github.com/betuxy/specter/internal/specter"
 	"github.com/spf13/cobra"
 )
 
