@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/betuxy/specter/pkg/specter"
+	"github.com/betuxy/specter/src/specter"
 	"github.com/spf13/cobra"
 )
 
@@ -50,7 +50,6 @@ var rootCmd = &cobra.Command{
 				os.Exit(1)
 
 			} else {
-				fmt.Println(path)
 				content, err := specter.ReadFromFile(path)
 
 				if err != nil {
