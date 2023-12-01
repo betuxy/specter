@@ -1,6 +1,7 @@
 package specter
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,4 +31,23 @@ func ReadFromFile(filename string) ([]byte, error) {
 	}
 
 	return content, nil
+}
+
+func PrintFileContent(content []byte) {
+	fmt.Println(string(content[:]))
+}
+
+func ReadFromStdin() []byte {
+	// Receive the input via stdin
+	scanner := bufio.NewScanner(os.Stdin)
+	var input []byte
+	for scanner.Scan() {
+		input = scanner.Bytes()
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "reading stdin: ", err)
+	}
+
+	return input
 }
