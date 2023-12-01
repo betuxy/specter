@@ -2,7 +2,8 @@ package specter
 
 import (
 	"encoding/json"
-	"fmt"
+	"io"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -22,24 +23,31 @@ func ParseJSON(data []byte) ([]map[string]interface{}, error) {
 	return []map[string]interface{}{jsonObject}, nil
 }
 
-func isJSONFormat(data []byte, jsonData *map[string]interface{}) (bool, error) {
-	if err := json.Unmarshal(data, jsonData); err != nil {
-		return false, err
+func ParseYAML(data []byte) ([]map[string]interface{}, error) {
+	var result []map[string]interface{}
+
+	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
+
+	for {
+		var document map[string]interface{}
+		if err := decoder.Decode(&document); err != nil {
+			if err == io.EOF {
+				break // End of documents
+			}
+			return nil, err
+		}
+
+		result = append(result, document)
 	}
-	return true, nil
+
+	return result, nil
 }
 
-func isYAMLFormat(data []byte, yamlData map[string]interface{}) (bool, error) {
-	err := yaml.Unmarshal(data, yamlData)
-	return false, err
-}
-
-func PrintSerializedJson(data map[string]interface{}) {
-	// Serialize map data back into JSON
+func toJSON(data map[string]interface{}) (string, error) {
 	serializedJSON, err := json.Marshal(data)
 	if err != nil {
-		fmt.Println("Error encoding JSON:", err)
+		return "", err
 	}
 
-	fmt.Println(string(serializedJSON))
+	return string(serializedJSON), nil
 }
