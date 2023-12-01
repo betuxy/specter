@@ -46,13 +46,18 @@ var rootCmd = &cobra.Command{
 				content, err = specter.ReadFromFile(path)
 
 				if err != nil {
-					fmt.Println("Somethin went wrong while reading the file.")
+					fmt.Println("Error: Can't read from file.", err)
+					os.Exit(1)
 				}
 
 			}
 
 		} else {
-			specter.ReadFromStdin()
+			var err error
+			content, err = specter.ReadFromStdin()
+			if err != nil {
+				fmt.Println("Error: Can't read from stdin.", err)
+			}
 		}
 
 		// TODO: Remove printing content
