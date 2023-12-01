@@ -33,7 +33,7 @@ func ReadFromFile(filename string) ([]byte, error) {
 	return content, nil
 }
 
-func PrintFileContent(content []byte) {
+func PrintByteSlice(content []byte) {
 	fmt.Println(string(content[:]))
 }
 
