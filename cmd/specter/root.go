@@ -72,6 +72,7 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		// TODO: Remove this print call
 		specter.PrintAllJSON(objectSlice)
 
 
