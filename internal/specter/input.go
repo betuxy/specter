@@ -37,17 +37,19 @@ func PrintFileContent(content []byte) {
 	fmt.Println(string(content[:]))
 }
 
-func ReadFromStdin() []byte {
+func ReadFromStdin() ([]byte, error) {
 	// Receive the input via stdin
 	scanner := bufio.NewScanner(os.Stdin)
-	var input []byte
+	var inputBytes []byte
+
 	for scanner.Scan() {
-		input = scanner.Bytes()
+		inputBytes = append(inputBytes, scanner.Bytes()...)
+		inputBytes = append(inputBytes, '\n')
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading stdin: ", err)
+		return nil, err
 	}
 
-	return input
+	return inputBytes, nil
 }
