@@ -55,11 +55,23 @@ var rootCmd = &cobra.Command{
 			specter.ReadFromStdin()
 		}
 
+		// TODO: Remove printing content
 		// Print file content
 		specter.PrintFileContent(content)
 
-		// This decision needs to either trigger the json or yaml parser later
-		//specter.JsonOrYaml(content)
+		var objectSlice []map[string]interface{}
+
+		// Try to parse the input as json
+		if result, err := specter.ParseJSON(content); err == nil {
+			objectSlice = result
+		} else if result, err := specter.ParseYAML(content); err == nil {
+			objectSlice = result
+		} else {
+			fmt.Println("Error: Wasn't able to parse either json or yaml")
+		}
+
+		fmt.Println(objectSlice)
+
 
 		// more to happen here
 
