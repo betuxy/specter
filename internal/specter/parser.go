@@ -2,6 +2,7 @@ package specter
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 
@@ -43,11 +44,26 @@ func ParseYAML(data []byte) ([]map[string]interface{}, error) {
 	return result, nil
 }
 
-func toJSON(data map[string]interface{}) (string, error) {
-	serializedJSON, err := json.Marshal(data)
+func PrintAllJSON(data []map[string]interface{}) {
+	objects, err := toJSON(data)
 	if err != nil {
-		return "", err
+		fmt.Println("Error:", err)
 	}
 
-	return string(serializedJSON), nil
+	for _, str := range objects {
+		fmt.Println(str)
+	}
+}
+
+func toJSON(data []map[string]interface{}) ([]string, error) {
+	var objects []string
+	for _, object := range data {
+		serializedJSON, err := json.Marshal(object)
+		if err != nil {
+			continue
+		}
+		objects = append(objects, string(serializedJSON))
+	}
+
+	return objects, nil
 }
