@@ -7,17 +7,19 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// This is not finished at all
-func JsonOrYaml(content []byte) (map[string]interface{}, error) {
-	json := make(map[string]interface{})
-	yaml := make(map[string]interface{})
-	if _, jsonErr := isJSONFormat(content, json); jsonErr == nil {
-		return json, nil
-	} else if _, yamlErr := isYAMLFormat(content, yaml); yamlErr == nil {
-		return yaml, nil
-	} else {
-		return nil, jsonErr
+func ParseJSON(data []byte) ([]map[string]interface{}, error) {
+	var jsonArray []map[string]interface{}
+	var jsonObject map[string]interface{}
+
+	if err := json.Unmarshal(data, &jsonArray); err == nil {
+		return jsonArray, nil
 	}
+
+	if err := json.Unmarshal(data, &jsonObject); err != nil {
+		return nil, err
+	}
+
+	return []map[string]interface{}{jsonObject}, nil
 }
 
 func isJSONFormat(data []byte, jsonData *map[string]interface{}) (bool, error) {
