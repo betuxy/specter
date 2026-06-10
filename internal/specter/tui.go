@@ -23,6 +23,9 @@ var (
 	tcellBg        = tcell.NewRGBColor(40, 42, 54)
 	tcellBar       = tcell.NewRGBColor(68, 71, 90)
 	tcellConnector = tcell.NewRGBColor(98, 114, 164)
+	selectedStyle  = tcell.StyleDefault.
+			Background(tcell.NewRGBColor(68, 71, 90)).
+			Foreground(tcell.NewRGBColor(248, 248, 242))
 )
 
 func RunTUI(data []map[string]interface{}, expanded bool) error {
@@ -37,7 +40,8 @@ func RunTUI(data []map[string]interface{}, expanded bool) error {
 			label := fmt.Sprintf("[%s]%s[-]", colorPurple, tview.Escape(fmt.Sprintf("[%d]", i)))
 			node := tview.NewTreeNode(label).
 				SetSelectable(true).
-				SetExpanded(expanded)
+				SetExpanded(expanded).
+				SetSelectedTextStyle(selectedStyle)
 			addMapToTree(node, obj, expanded)
 			root.AddChild(node)
 		}
@@ -108,21 +112,24 @@ func addValueToTree(parent *tview.TreeNode, key string, value interface{}, expan
 		label := fmt.Sprintf("[%s]%s[-]", colorPurple, escapedKey)
 		node := tview.NewTreeNode(label).
 			SetSelectable(true).
-			SetExpanded(expanded)
+			SetExpanded(expanded).
+			SetSelectedTextStyle(selectedStyle)
 		addMapToTree(node, v, expanded)
 		parent.AddChild(node)
 	case []interface{}:
 		label := fmt.Sprintf("[%s]%s[-] [%s](%d)[-]", colorPurple, escapedKey, colorComment, len(v))
 		node := tview.NewTreeNode(label).
 			SetSelectable(true).
-			SetExpanded(expanded)
+			SetExpanded(expanded).
+			SetSelectedTextStyle(selectedStyle)
 		for i, item := range v {
 			escapedIdx := tview.Escape(fmt.Sprintf("[%d]", i))
 			if obj, ok := item.(map[string]interface{}); ok {
 				itemLabel := fmt.Sprintf("[%s]%s[-] %s", colorCyan, escapedIdx, compactColorized(obj, 1))
 				itemNode := tview.NewTreeNode(itemLabel).
 					SetSelectable(true).
-					SetExpanded(expanded)
+					SetExpanded(expanded).
+					SetSelectedTextStyle(selectedStyle)
 				addMapToTree(itemNode, obj, expanded)
 				node.AddChild(itemNode)
 			} else {
