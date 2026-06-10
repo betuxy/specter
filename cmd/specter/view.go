@@ -12,6 +12,6 @@ var viewCmd = &cobra.Command{
 		if err := loadInput(); err != nil {
 			return err
 		}
-		return isp.RunTUI(parsedData, expanded)
+		return isp.RunTUI(parsedData, expanded, getConfig())
 	},
 }

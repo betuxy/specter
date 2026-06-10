@@ -11,6 +11,7 @@ import (
 var (
 	file        string
 	expanded    bool
+	configFile  string
 	parsedData  []map[string]interface{}
 	inputFormat string
 )
@@ -29,13 +30,14 @@ var rootCmd = &cobra.Command{
 		if err := loadInput(); err != nil {
 			return err
 		}
-		return isp.RunTUI(parsedData, expanded)
+		return isp.RunTUI(parsedData, expanded, getConfig())
 	},
 }
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&file, "file", "f", "", "Input file (reads stdin if omitted)")
 	rootCmd.PersistentFlags().BoolVarP(&expanded, "expanded", "e", false, "Start with all nodes expanded")
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "Config file (default: $HOME/.config/specter/config.yaml)")
 	rootCmd.AddCommand(viewCmd, fmtCmd, convertCmd, versionCmd)
 }
 
@@ -72,4 +74,20 @@ func loadInput() error {
 	}
 
 	return nil
+}
+
+func getConfig() *isp.Config {
+	path := configFile
+	if path == "" {
+		var err error
+		path, err = isp.DefaultConfigPath()
+		if err != nil {
+			return isp.DefaultConfig()
+		}
+	}
+	cfg, err := isp.LoadConfig(path)
+	if err != nil {
+		return isp.DefaultConfig()
+	}
+	return cfg
 }

@@ -28,7 +28,8 @@ var (
 			Foreground(tcell.NewRGBColor(248, 248, 242))
 )
 
-func RunTUI(data []map[string]interface{}, expanded bool) error {
+func RunTUI(data []map[string]interface{}, expanded bool, cfg *Config) error {
+	kb := cfg.Keybindings
 	app := tview.NewApplication()
 
 	root := tview.NewTreeNode("root")
@@ -60,8 +61,11 @@ func RunTUI(data []map[string]interface{}, expanded bool) error {
 	statusBar := tview.NewTextView().
 		SetDynamicColors(true).
 		SetText(fmt.Sprintf(
-			"  [%s]j/k ↑/↓[-]  navigate   [%s]space/enter[-]  expand/collapse   [%s]e[-]  expand/collapse all   [%s]q[-]  quit",
-			colorYellow, colorYellow, colorYellow, colorYellow,
+			"  [%s]%s/%s ↑/↓[-]  navigate   [%s]%s/enter[-]  expand/collapse   [%s]%s[-]  expand/collapse all   [%s]%s[-]  quit",
+			colorYellow, keyName(kb.Up), keyName(kb.Down),
+			colorYellow, keyName(kb.ExpandCollapse),
+			colorYellow, keyName(kb.ExpandCollapseAll),
+			colorYellow, keyName(kb.Quit),
 		))
 	statusBar.SetBackgroundColor(tcellBar)
 
@@ -72,20 +76,20 @@ func RunTUI(data []map[string]interface{}, expanded bool) error {
 
 	tree.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
-		case 'j':
+		case kb.Down:
 			return tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)
-		case 'k':
+		case kb.Up:
 			return tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)
-		case 'q':
+		case kb.Quit:
 			app.Stop()
 			return nil
-		case ' ':
+		case kb.ExpandCollapse:
 			node := tree.GetCurrentNode()
 			if node != nil && len(node.GetChildren()) > 0 {
 				node.SetExpanded(!node.IsExpanded())
 			}
 			return nil
-		case 'e':
+		case kb.ExpandCollapseAll:
 			node := tree.GetCurrentNode()
 			if node != nil && len(node.GetChildren()) > 0 {
 				setExpandedRecursive(node, !node.IsExpanded())
@@ -214,6 +218,13 @@ func sortedKeys(m map[string]interface{}) []string {
 		return keys[i] < keys[j]
 	})
 	return keys
+}
+
+func keyName(r rune) string {
+	if r == ' ' {
+		return "space"
+	}
+	return string(r)
 }
 
 func setExpandedRecursive(node *tview.TreeNode, expanded bool) {
