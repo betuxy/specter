@@ -3,6 +3,7 @@ package specter
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -19,8 +20,8 @@ const (
 )
 
 var (
-	tcellBg  = tcell.NewRGBColor(40, 42, 54)
-	tcellBar = tcell.NewRGBColor(68, 71, 90)
+	tcellBg        = tcell.NewRGBColor(40, 42, 54)
+	tcellBar       = tcell.NewRGBColor(68, 71, 90)
 	tcellConnector = tcell.NewRGBColor(98, 114, 164)
 )
 
@@ -95,13 +96,7 @@ func RunTUI(data []map[string]interface{}, expanded bool) error {
 }
 
 func addMapToTree(parent *tview.TreeNode, m map[string]interface{}, expanded bool) {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, k := range keys {
+	for _, k := range sortedKeys(m) {
 		addValueToTree(parent, k, m[k], expanded)
 	}
 }
@@ -122,13 +117,55 @@ func addValueToTree(parent *tview.TreeNode, key string, value interface{}, expan
 			SetSelectable(true).
 			SetExpanded(expanded)
 		for i, item := range v {
-			addValueToTree(node, fmt.Sprintf("[%d]", i), item, expanded)
+			escapedIdx := tview.Escape(fmt.Sprintf("[%d]", i))
+			if obj, ok := item.(map[string]interface{}); ok {
+				itemLabel := fmt.Sprintf("[%s]%s[-] %s", colorCyan, escapedIdx, compactColorized(obj, 1))
+				itemNode := tview.NewTreeNode(itemLabel).
+					SetSelectable(true).
+					SetExpanded(expanded)
+				addMapToTree(itemNode, obj, expanded)
+				node.AddChild(itemNode)
+			} else {
+				addValueToTree(node, fmt.Sprintf("[%d]", i), item, expanded)
+			}
 		}
 		parent.AddChild(node)
 	default:
 		label := fmt.Sprintf("[%s]%s[-]: %s", colorPurple, escapedKey, formatValue(value))
 		node := tview.NewTreeNode(label).SetSelectable(false)
 		parent.AddChild(node)
+	}
+}
+
+func compactColorized(m map[string]interface{}, depth int) string {
+	keys := sortedKeys(m)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("[%s]%s[-]: %s", colorCyan, tview.Escape(k), compactValue(m[k], depth-1)))
+	}
+	sep := fmt.Sprintf("[%s], [-]", colorComment)
+	return fmt.Sprintf("[%s]{[-]%s[%s]}[-]", colorComment, strings.Join(parts, sep), colorComment)
+}
+
+func compactValue(value interface{}, depth int) string {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		if depth <= 0 {
+			return fmt.Sprintf("[%s]{...}[-]", colorComment)
+		}
+		return compactColorized(v, depth)
+	case []interface{}:
+		if depth <= 0 || len(v) == 0 {
+			return fmt.Sprintf("[%s][%d][-]", colorComment, len(v))
+		}
+		parts := make([]string, 0, len(v))
+		for _, item := range v {
+			parts = append(parts, compactValue(item, depth-1))
+		}
+		sep := fmt.Sprintf("[%s], [-]", colorComment)
+		return fmt.Sprintf("[%s][ [-]%s[%s] ][-]", colorComment, strings.Join(parts, sep), colorComment)
+	default:
+		return formatValue(value)
 	}
 }
 
@@ -146,6 +183,22 @@ func formatValue(value interface{}) string {
 	case nil:
 		return fmt.Sprintf("[%s]null[-]", colorComment)
 	default:
-		return fmt.Sprintf("[%s]%v[-]", colorFg, v)
+		return fmt.Sprintf("[%s]%v[-]", colorFg, tview.Escape(fmt.Sprintf("%v", v)))
 	}
+}
+
+func sortedKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		iName := strings.Contains(strings.ToLower(keys[i]), "name")
+		jName := strings.Contains(strings.ToLower(keys[j]), "name")
+		if iName != jName {
+			return iName
+		}
+		return keys[i] < keys[j]
+	})
+	return keys
 }
