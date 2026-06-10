@@ -109,7 +109,7 @@ func addValueToTree(parent *tview.TreeNode, key string, value interface{}, expan
 	escapedKey := tview.Escape(key)
 	switch v := value.(type) {
 	case map[string]interface{}:
-		label := fmt.Sprintf("[%s]%s[-]", colorPurple, escapedKey)
+		label := fmt.Sprintf("[%s]%s[-] [%s](%d)[-]", colorPurple, escapedKey, colorComment, len(v))
 		node := tview.NewTreeNode(label).
 			SetSelectable(true).
 			SetExpanded(expanded).
