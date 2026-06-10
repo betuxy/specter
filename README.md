@@ -25,6 +25,40 @@ specter -f file.json --expanded
 specter view -f file.json
 ```
 
+## Examples
+
+```sh
+# Docker
+docker container inspect <name> | specter
+docker network inspect <name> | specter
+docker image inspect <name> | specter
+
+# Kubernetes
+kubectl get pod <name> -o json | specter
+kubectl get configmap <name> -o json | specter
+kubectl get nodes -o json | specter
+
+# AWS CLI
+aws ec2 describe-instances | specter
+aws s3api get-bucket-policy --bucket <name> | specter
+aws iam get-user | specter
+
+# Terraform
+terraform show -json | specter
+
+# Helm
+helm get values <release> -o json | specter
+
+# REST APIs
+curl -s https://api.github.com/repos/betuxy/specter | specter
+curl -s https://api.github.com/users/<user>/repos | specter
+
+# Files
+specter -f docker-compose.yml
+specter -f deployment.yaml
+specter -f package.json
+```
+
 ## Commands
 
 | Command | Description |
@@ -59,6 +93,9 @@ cat file.yaml | specter convert --to json
 | `k` / `↑` | Move up |
 | `space` / `enter` | Expand / collapse node |
 | `e` | Expand / collapse entire subtree |
+| `/` | Open search |
+| `n` / `N` | Next / previous match |
+| `esc` | Close search |
 | `q` | Quit |
 
 ### Custom keybindings
