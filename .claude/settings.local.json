@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude update *)",
+      "Bash(go get *)",
+      "Read(//usr/local/go/**)",
+      "Read(//home/claude/go/**)"
+    ]
+  }
+}

@@ -10,9 +10,11 @@ import (
 
 // Flags
 var file string
+var expanded bool
 
 func init() {
 	rootCmd.Flags().StringVarP(&file, "file", "f", "", "Input file")
+	rootCmd.Flags().BoolVarP(&expanded, "expanded", "e", false, "Start with all nodes expanded")
 }
 
 func Execute() {
@@ -72,11 +74,10 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// TODO: Remove this print call
-		specter.PrintAllJSON(objectSlice)
-
-
-		// more to happen here
+		if err := specter.RunTUI(objectSlice, expanded); err != nil {
+			fmt.Println("Error:", err)
+			os.Exit(1)
+		}
 
 	},
 }
