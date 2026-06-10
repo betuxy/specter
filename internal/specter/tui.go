@@ -2,6 +2,7 @@ package specter
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -26,6 +27,7 @@ var (
 	selectedStyle  = tcell.StyleDefault.
 			Background(tcell.NewRGBColor(68, 71, 90)).
 			Foreground(tcell.NewRGBColor(248, 248, 242))
+	tagRe = regexp.MustCompile(`\[[^\[\]]*\]`)
 )
 
 func RunTUI(data []map[string]interface{}, expanded bool, cfg *Config) error {
@@ -42,7 +44,8 @@ func RunTUI(data []map[string]interface{}, expanded bool, cfg *Config) error {
 			node := tview.NewTreeNode(label).
 				SetSelectable(true).
 				SetExpanded(expanded).
-				SetSelectedTextStyle(selectedStyle)
+				SetSelectedTextStyle(selectedStyle).
+				SetReference(stripColorTags(label))
 			addMapToTree(node, obj, expanded)
 			root.AddChild(node)
 		}
@@ -58,21 +61,79 @@ func RunTUI(data []map[string]interface{}, expanded bool, cfg *Config) error {
 		tree.SetCurrentNode(children[0])
 	}
 
+	// Search state
+	var (
+		matches  []*tview.TreeNode
+		matchIdx int
+	)
+
 	statusBar := tview.NewTextView().
 		SetDynamicColors(true).
 		SetText(fmt.Sprintf(
-			"  [%s]%s/%s ↑/↓[-]  navigate   [%s]%s/enter[-]  expand/collapse   [%s]%s[-]  expand/collapse all   [%s]%s[-]  quit",
+			"  [%s]%s/%s ↑/↓[-]  navigate   [%s]%s/enter[-]  expand/collapse   [%s]%s[-]  expand/collapse all   [%s]/[-]  search   [%s]%s[-]  quit",
 			colorYellow, keyName(kb.Up), keyName(kb.Down),
 			colorYellow, keyName(kb.ExpandCollapse),
 			colorYellow, keyName(kb.ExpandCollapseAll),
+			colorYellow,
 			colorYellow, keyName(kb.Quit),
 		))
 	statusBar.SetBackgroundColor(tcellBar)
 
+	searchInput := tview.NewInputField().
+		SetLabel(" / ").
+		SetLabelColor(tcell.NewRGBColor(241, 250, 140)).
+		SetFieldBackgroundColor(tcellBg).
+		SetFieldTextColor(tcell.NewRGBColor(248, 248, 242))
+	searchInput.SetBackgroundColor(tcellBar)
+
+	bottomPages := tview.NewPages()
+	bottomPages.AddPage("bar", statusBar, true, true)
+	bottomPages.AddPage("search", searchInput, true, false)
+
 	layout := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(tree, 0, 1, true).
-		AddItem(statusBar, 1, 0, false)
+		AddItem(bottomPages, 1, 0, false)
+
+	jumpToMatch := func(idx int) {
+		if len(matches) == 0 {
+			return
+		}
+		for _, child := range root.GetChildren() {
+			setExpandedRecursive(child, false)
+		}
+		node := matches[idx]
+		expandToNode(root, node)
+		tree.SetCurrentNode(node)
+		searchInput.SetLabel(fmt.Sprintf(" [%d/%d] / ", idx+1, len(matches)))
+	}
+
+	searchInput.SetChangedFunc(func(text string) {
+		if text == "" {
+			matches = nil
+			matchIdx = 0
+			searchInput.SetLabel(" / ")
+			return
+		}
+		matches = findMatches(root, strings.ToLower(text))
+		matchIdx = 0
+		if len(matches) == 0 {
+			searchInput.SetLabel(" [no match] / ")
+			return
+		}
+		jumpToMatch(0)
+	})
+
+	searchInput.SetDoneFunc(func(key tcell.Key) {
+		if key == tcell.KeyEscape {
+			searchInput.SetText("")
+			matches = nil
+			matchIdx = 0
+			searchInput.SetLabel(" / ")
+		}
+		bottomPages.SwitchToPage("bar")
+		app.SetFocus(tree)
+	})
 
 	tree.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
@@ -95,6 +156,22 @@ func RunTUI(data []map[string]interface{}, expanded bool, cfg *Config) error {
 				setExpandedRecursive(node, !node.IsExpanded())
 			}
 			return nil
+		case '/':
+			bottomPages.SwitchToPage("search")
+			app.SetFocus(searchInput)
+			return nil
+		case 'n':
+			if len(matches) > 0 {
+				matchIdx = (matchIdx + 1) % len(matches)
+				jumpToMatch(matchIdx)
+			}
+			return nil
+		case 'N':
+			if len(matches) > 0 {
+				matchIdx = (matchIdx - 1 + len(matches)) % len(matches)
+				jumpToMatch(matchIdx)
+			}
+			return nil
 		}
 		if event.Key() == tcell.KeyEnter {
 			node := tree.GetCurrentNode()
@@ -107,6 +184,43 @@ func RunTUI(data []map[string]interface{}, expanded bool, cfg *Config) error {
 	})
 
 	return app.SetRoot(layout, true).Run()
+}
+
+func findMatches(root *tview.TreeNode, query string) []*tview.TreeNode {
+	var matches []*tview.TreeNode
+	collectMatches(root, query, &matches)
+	return matches
+}
+
+func collectMatches(node *tview.TreeNode, query string, matches *[]*tview.TreeNode) {
+	if ref, ok := node.GetReference().(string); ok {
+		if strings.Contains(strings.ToLower(ref), query) {
+			*matches = append(*matches, node)
+		}
+	}
+	for _, child := range node.GetChildren() {
+		collectMatches(child, query, matches)
+	}
+}
+
+// expandToNode expands all ancestors of target so it becomes visible.
+func expandToNode(node, target *tview.TreeNode) bool {
+	if node == target {
+		return true
+	}
+	for _, child := range node.GetChildren() {
+		if expandToNode(child, target) {
+			node.SetExpanded(true)
+			return true
+		}
+	}
+	return false
+}
+
+func stripColorTags(s string) string {
+	s = strings.ReplaceAll(s, "[[]", "\x00")
+	s = tagRe.ReplaceAllString(s, "")
+	return strings.ReplaceAll(s, "\x00", "[")
 }
 
 func addMapToTree(parent *tview.TreeNode, m map[string]interface{}, expanded bool) {
@@ -123,7 +237,8 @@ func addValueToTree(parent *tview.TreeNode, key string, value interface{}, expan
 		node := tview.NewTreeNode(label).
 			SetSelectable(true).
 			SetExpanded(expanded).
-			SetSelectedTextStyle(selectedStyle)
+			SetSelectedTextStyle(selectedStyle).
+			SetReference(stripColorTags(label))
 		addMapToTree(node, v, expanded)
 		parent.AddChild(node)
 	case []interface{}:
@@ -131,7 +246,8 @@ func addValueToTree(parent *tview.TreeNode, key string, value interface{}, expan
 		node := tview.NewTreeNode(label).
 			SetSelectable(true).
 			SetExpanded(expanded).
-			SetSelectedTextStyle(selectedStyle)
+			SetSelectedTextStyle(selectedStyle).
+			SetReference(stripColorTags(label))
 		for i, item := range v {
 			escapedIdx := tview.Escape(fmt.Sprintf("[%d]", i))
 			if obj, ok := item.(map[string]interface{}); ok {
@@ -139,7 +255,8 @@ func addValueToTree(parent *tview.TreeNode, key string, value interface{}, expan
 				itemNode := tview.NewTreeNode(itemLabel).
 					SetSelectable(true).
 					SetExpanded(expanded).
-					SetSelectedTextStyle(selectedStyle)
+					SetSelectedTextStyle(selectedStyle).
+					SetReference(fmt.Sprintf("[%d]", i))
 				addMapToTree(itemNode, obj, expanded)
 				node.AddChild(itemNode)
 			} else {
@@ -149,7 +266,9 @@ func addValueToTree(parent *tview.TreeNode, key string, value interface{}, expan
 		parent.AddChild(node)
 	default:
 		label := fmt.Sprintf("[%s]%s[-]: %s", colorPurple, escapedKey, formatValue(value))
-		node := tview.NewTreeNode(label).SetSelectable(false)
+		node := tview.NewTreeNode(label).
+			SetSelectable(false).
+			SetReference(stripColorTags(label))
 		parent.AddChild(node)
 	}
 }
