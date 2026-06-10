@@ -60,8 +60,8 @@ func RunTUI(data []map[string]interface{}, expanded bool) error {
 	statusBar := tview.NewTextView().
 		SetDynamicColors(true).
 		SetText(fmt.Sprintf(
-			"  [%s]j/k ↑/↓[-]  navigate   [%s]space/enter[-]  expand/collapse   [%s]q[-]  quit",
-			colorYellow, colorYellow, colorYellow,
+			"  [%s]j/k ↑/↓[-]  navigate   [%s]space/enter[-]  expand/collapse   [%s]e[-]  expand/collapse all   [%s]q[-]  quit",
+			colorYellow, colorYellow, colorYellow, colorYellow,
 		))
 	statusBar.SetBackgroundColor(tcellBar)
 
@@ -83,6 +83,12 @@ func RunTUI(data []map[string]interface{}, expanded bool) error {
 			node := tree.GetCurrentNode()
 			if node != nil && len(node.GetChildren()) > 0 {
 				node.SetExpanded(!node.IsExpanded())
+			}
+			return nil
+		case 'e':
+			node := tree.GetCurrentNode()
+			if node != nil && len(node.GetChildren()) > 0 {
+				setExpandedRecursive(node, !node.IsExpanded())
 			}
 			return nil
 		}
@@ -208,4 +214,11 @@ func sortedKeys(m map[string]interface{}) []string {
 		return keys[i] < keys[j]
 	})
 	return keys
+}
+
+func setExpandedRecursive(node *tview.TreeNode, expanded bool) {
+	node.SetExpanded(expanded)
+	for _, child := range node.GetChildren() {
+		setExpandedRecursive(child, expanded)
+	}
 }
